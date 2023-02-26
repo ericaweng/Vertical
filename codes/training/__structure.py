@@ -12,6 +12,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from ..__base import BaseObject
 from ..args import BaseArgTable
@@ -483,7 +484,7 @@ class Structure(BaseObject):
         ds_test = self.load_test_dataset(agents)
 
         # Run test
-        outputs, labels, metrics, metrics_dict = self.__test_on_dataset(
+        outputs, labels, obses, metrics, metrics_dict = self.__test_on_dataset(
             ds=ds_test,
             return_results=True,
             show_timebar=True,
@@ -495,10 +496,94 @@ class Structure(BaseObject):
         # model_inputs_all = list(ds_test.as_numpy_iterator())
         outputs = stack_results(outputs)
         labels = stack_results(labels)
+        obses = stack_results(obses)
 
         self.write_test_results(outputs=outputs,
                                 agents=agents,
                                 dataset=dataset)
+
+        # save trajectories to standard format
+        frames = []
+        ped_ids_list = []
+        seq_names = []
+        dset_to_num_peds = {
+            'eth': 364,
+            'hotel': 1197, # but has 1075
+            'univ': 14295 + 10039,
+            'zara1': 2356,
+            'zara2': 5910,
+            'sdd': 2829,
+        }
+        assert dset_to_num_peds[dataset] == len(outputs[0]), \
+            f'{dataset} should have {dset_to_num_peds[dataset]} peds but has {len(outputs[0])}'
+        dset_dir = f'data/peds_per_scene/{dataset}'
+        for seq in os.listdir(dset_dir):
+            with open(os.path.join(dset_dir, seq), 'r') as f:
+                for line in f.read().splitlines():
+                    data = line.split(' ')
+                    seq_names.append(data[0])
+                    num_frames = int(data[1])
+                    num_peds = int(data[2])
+                    frames.append(data[3:3+num_frames])
+                    ped_ids_list.append(data[3+num_frames:3+num_frames+num_peds])
+                    assert len(data) == 3+num_frames+num_peds, f'len(data) ({len(data)}) != {3+num_frames+num_peds}'
+        # for dset_outputs, dset_labels in zip(outputs, labels):
+        obs = obses[0]
+        offset = obs[:, -1:, :]
+        print("[:,.shape:", obs.shape)
+        dset_outputs = outputs[0] + offset[:, tf.newaxis, :, :]
+        dset_labels = labels[0] + offset
+        peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids_list]).tolist()
+        save_path = '../trajectory_reward/results/trajectories/vv'
+        if dataset == 'sdd':
+            save_path += '/sdd'
+        for s, e, ped_ids, frame_ids, seq_name in tqdm(zip([0]+peds_per_seq[:-1], peds_per_seq, ped_ids_list, frames,
+                                                           seq_names), desc='Saving trajectories...', total=len(peds_per_seq)):
+            pred = np.flip(dset_outputs[s:e].numpy().transpose(1,2,0,3), -1)  # --> (20, 12, num_peds, 2) + flip x and y
+            flattened_gt = self.flatten_scene(np.flip(dset_labels[s:e].numpy().transpose(1,0,2), -1),
+                                              frame_ids[self.args.obs_frames:], ped_ids)  # --> (12, num_peds, 2)
+            flattened_obs = self.flatten_scene(np.flip(obs[s:e].numpy().transpose(1,0,2), -1),
+                                               frame_ids[:self.args.obs_frames], ped_ids)  # --> (8, num_peds, 2)
+            for sample_i, sample in enumerate(pred):
+                flattened_peds = self.flatten_scene(sample, frame_ids[self.args.obs_frames:], ped_ids)
+                self.save_trajectories(flattened_peds, save_path, seq_name, frame_ids[self.args.obs_frames-1],
+                                       suffix=f'/sample_{sample_i:03d}')
+            self.save_trajectories(flattened_gt, save_path, seq_name, frame_ids[self.args.obs_frames-1], suffix='/gt')
+            self.save_trajectories(flattened_obs, save_path, seq_name, frame_ids[self.args.obs_frames - 1], suffix='/obs')
+        print(f"saved {len(frames)} trajectories to {save_path}")
+
+    @staticmethod
+    def flatten_scene(trajs_arr, frame_nums=None, ped_nums=None, frame_skip=10):
+        """flattens a 3d scene of shape (ts, num_peds, 2) into a 2d array of shape (ts x num_peds, 4)
+        ped_nums (optional): list of ped numbers to assign, length == num_peds
+        frame_nums (optional): list of frame numbers to assign to the resulting, length == ts
+        """
+        if ped_nums is None:
+            ped_nums = np.arange(0, trajs_arr.shape[1])
+        if frame_nums is None:
+            frame_nums = np.arange(0, trajs_arr.shape[0] * frame_skip, frame_skip)
+        frame_ids = np.tile(np.array(frame_nums).reshape(-1, 1), (1, trajs_arr.shape[1])).reshape(-1, 1)
+        ped_ids = np.tile(np.array(ped_nums).reshape(1, -1), (trajs_arr.shape[0], 1)).reshape(-1, 1)
+        trajs_arr = np.concatenate([frame_ids, ped_ids, trajs_arr.reshape(-1, 2)], -1)
+        return trajs_arr
+
+    @staticmethod
+    def save_trajectories(trajectory, save_dir, seq_name, frame, suffix=''):
+        """Save trajectories in a text file.
+        Input:
+            trajectory: (np.array/torch.Tensor) Predcited trajectories with shape
+                        of (future_timesteps * n_pedestrian, 4). The last element is
+                        [frame_id, track_id, x, y] where each element is float.
+            save_dir: (str) Directory to save into.
+            seq_name: (str) Sequence name (e.g., eth_biwi, coupa_0)
+            frame: (num) Frame ID.
+            suffix: (str) Additional suffix to put into file name.
+        """
+
+        fname = f"{save_dir}/{seq_name}/frame_{int(frame):06d}{suffix}.txt"
+        if not os.path.exists(os.path.dirname(fname)):
+            os.makedirs(os.path.dirname(fname))
+        np.savetxt(fname, trajectory, fmt="%s")
 
     def __test_on_dataset(self, ds: tf.data.Dataset,
                           return_results=False,
@@ -506,6 +591,7 @@ class Structure(BaseObject):
 
         # init variables for test
         outputs_all = []
+        obs_all = []
         labels_all = []
         metrics_all = []
         metrics_dict_all = {}
@@ -529,6 +615,7 @@ class Structure(BaseObject):
             test_numbers.append(outputs[0].shape[0])
 
             if return_results:
+                obs_all = append_results_to_list(dat[:1], obs_all)
                 outputs_all = append_results_to_list(outputs, outputs_all)
                 labels_all = append_results_to_list(dat[-1:], labels_all)
 
@@ -551,7 +638,7 @@ class Structure(BaseObject):
                  tf.reduce_sum(weights)).numpy()
 
         if return_results:
-            return outputs_all, labels_all, metrics_all, metrics_dict_all
+            return outputs_all, labels_all, obs_all, metrics_all, metrics_dict_all
         else:
             return metrics_all, metrics_dict_all
 

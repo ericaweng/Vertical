@@ -121,7 +121,7 @@ class Trajectory():
             dis = calculate_length(nei_pos - tar_pos)
             neighbors = neighbors[np.argsort(dis)[1:max_neighbor+1]]
 
-        nei_traj = matrix[start_frame:end_frame:frame_step, neighbors, :]
+        nei_traj = matrix[start_frame:end_frame:frame_step, neighbors.tolist(), :]
         nei_traj = np.transpose(nei_traj, [1, 0, 2])
         tar_traj = self.traj[start_frame:end_frame:frame_step, :]
 

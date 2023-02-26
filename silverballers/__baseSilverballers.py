@@ -97,8 +97,8 @@ class BaseSilverballers(C.training.Structure):
         self.set_labels('gt')
 
         # set metrics
-        self.set_metrics('ade', 'fde')
-        self.set_metrics_weights(1.0, 0.0)
+        self.set_metrics('ade', 'fde')#, 'sADE', 'sFDE', 'col_pred_mean', 'col_pred_max')
+        self.set_metrics_weights(1.0, 0.0)#, 0., 0., 0., 0.)
 
         # check weights
         if 'null' in [self.args.loada, self.args.loadb]:

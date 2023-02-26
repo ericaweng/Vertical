@@ -426,7 +426,9 @@ class DatasetManager(BaseObject):
                 dataset = [dataset]
 
             dms = [VideoClipManager(args, d) for d in dataset]
-            return Dm.load_from_videoClips(dms, mode=mode)
+            agents = Dm.load_from_videoClips(dms, mode=mode)
+            print("len(agents):", len(agents))
+            return agents
 
     def load_maps(self, base_path: str,
                   agents: list[Agent],

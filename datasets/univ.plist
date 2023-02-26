@@ -5,6 +5,7 @@
 	<key>test</key>
 	<array>
 		<string>univ</string>
+		<string>univ3</string>
 	</array>
 	<key>train</key>
 	<array>
@@ -13,7 +14,6 @@
 		<string>zara1</string>
 		<string>zara2</string>
 		<string>zara3</string>
-		<string>univ3</string>
 		<string>unive</string>
 	</array>
 	<key>val</key>

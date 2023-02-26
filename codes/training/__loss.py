@@ -13,6 +13,8 @@ from typing import Any, Union
 
 import tensorflow as tf
 
+# from codes.training.metrics import compute_ADE_joint, compute_CR, compute_FDE_joint
+
 
 def apply(loss_list: list[Union[str, Any]],
           model_outputs: list[tf.Tensor],
@@ -25,8 +27,12 @@ def apply(loss_list: list[Union[str, Any]],
     for loss in loss_list:
         if type(loss) == str:
             if re.match('[Aa][Dd][Ee]', loss):
-                loss_dict['ADE({})'.format(mode)] = ADE(
-                    model_outputs[0], labels)
+                # print('loss', loss)
+                # print('model_outputs[0]', model_outputs[0].shape)
+                # print('labels', labels.shape)
+                loss_dict['ADE({})'.format(mode)] = ADE(model_outputs[0], labels)
+                # print('loss_dict', loss_dict['ADE({})'.format(mode)])
+                # import ipdb; ipdb.set_trace()
 
             elif re.match('[Ff][Dd][Ee]', loss):
                 loss_dict['FDE({})'.format(mode)] = FDE(
@@ -41,6 +47,27 @@ def apply(loss_list: list[Union[str, Any]],
                 loss_dict['Diff'] = tf.reduce_sum(
                     tf.stack(weights) *
                     tf.stack(diff(model_outputs[0], labels, order)))
+
+            elif re.match('sADE', loss):
+                loss_dict['sADE({})'.format(mode)] = compute_ADE_joint(
+                        model_outputs[0], labels)
+
+            elif re.match('sFDE', loss):
+                loss_dict['sFDE({})'.format(mode)] = compute_FDE_joint(
+                        model_outputs[0], labels)
+
+            elif re.match('col_pred_mean', loss):
+                collision = partial(compute_CR, aggregation='mean')
+                loss_dict['col_pred_mean({})'.format(mode)] = collision(
+                        model_outputs[0], labels)
+
+            elif re.match('col_pred_max', loss):
+                collision = partial(compute_CR, aggregation='max')
+                loss_dict['col_pred_max({})'.format(mode)] = collision(
+                        model_outputs[0], labels)
+
+            else:
+                raise NotImplementedError('loss type `{}` is not supported.'.format(loss))
 
         elif callable(loss):
             loss_dict[loss.__name__ + '({})'.format(mode)] = loss(model_outputs, labels,
@@ -188,4 +215,3 @@ def difference(trajs: tf.Tensor, direction='back', ordd=1) -> list[tf.Tensor]:
             outputs[-1][:, 1:, :] - outputs[-1][:, :-1, :]
         outputs.append(outputs_current)
     return outputs
-    

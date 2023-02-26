@@ -58,18 +58,18 @@
 	</array>
 	<key>val</key>
 	<array>
-		<string>quad2</string>
-		<string>little2</string>
-		<string>little3</string>
-		<string>hyang4</string>
-		<string>hyang9</string>
-		<string>nexus4</string>
-		<string>nexus7</string>
-		<string>coupa1</string>
-		<string>bookstore3</string>
-		<string>gates1</string>
-		<string>gates3</string>
-		<string>gates4</string>
+		<string>little1</string>
+		<string>deathCircle4</string>
+		<string>hyang2</string>
+		<string>hyang3</string>
+		<string>hyang6</string>
+		<string>hyang7</string>
+		<string>hyang11</string>
+		<string>hyang13</string>
+		<string>nexus3</string>
+		<string>bookstore6</string>
+		<string>gates7</string>
+		<string>gates8</string>
 	</array>
 </dict>
 </plist>
