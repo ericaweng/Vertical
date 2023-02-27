@@ -38,8 +38,12 @@ class Structure(BaseObject):
         self.set_inputs('obs')
         self.set_labels('pred')
 
+        # self.set_loss('sade')
         self.set_loss('ade')
         self.set_loss_weights(1.0)
+        self.set_metrics('ade', 'fde')#, 'sade', 'sfde', 'col_pred_mean', 'col_pred_max')
+        self.set_metrics_weights(1.0, 0.0)
+        # self.set_metrics_weights(0.0, 0.0, 1., 0., 0., 0.)
 
         self.set_metrics('ade', 'fde')
         self.set_metrics_weights(1.0, 0.0)

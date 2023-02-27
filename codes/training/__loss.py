@@ -13,7 +13,7 @@ from typing import Any, Union
 
 import tensorflow as tf
 
-# from codes.training.metrics import compute_ADE_joint, compute_CR, compute_FDE_joint
+from codes.training.metrics import compute_ADE_joint, compute_CR, compute_FDE_joint
 
 
 def apply(loss_list: list[Union[str, Any]],
@@ -48,13 +48,13 @@ def apply(loss_list: list[Union[str, Any]],
                     tf.stack(weights) *
                     tf.stack(diff(model_outputs[0], labels, order)))
 
-            elif re.match('sADE', loss):
-                loss_dict['sADE({})'.format(mode)] = compute_ADE_joint(
-                        model_outputs[0], labels)
-
-            elif re.match('sFDE', loss):
-                loss_dict['sFDE({})'.format(mode)] = compute_FDE_joint(
-                        model_outputs[0], labels)
+            # elif re.match('sade', loss):
+            #     loss_dict['sADE({})'.format(mode)] = compute_ADE_joint(
+            #             model_outputs[0], labels)
+            #
+            # elif re.match('sfde', loss):
+            #     loss_dict['sFDE({})'.format(mode)] = compute_FDE_joint(
+            #             model_outputs[0], labels)
 
             elif re.match('col_pred_mean', loss):
                 collision = partial(compute_CR, aggregation='mean')
@@ -68,6 +68,8 @@ def apply(loss_list: list[Union[str, Any]],
 
             else:
                 raise NotImplementedError('loss type `{}` is not supported.'.format(loss))
+            # print("loss", loss)
+            # import ipdb; ipdb.set_trace()
 
         elif callable(loss):
             loss_dict[loss.__name__ + '({})'.format(mode)] = loss(model_outputs, labels,

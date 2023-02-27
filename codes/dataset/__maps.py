@@ -261,7 +261,7 @@ class MapManager(BaseObject):
         batch, a, b = maps.shape[-3:]
         centers = centers.astype(np.int32)
 
-        centers = np.maximum(centers, half_size)
+        centers = np.maximum(centers, half_size).reshape(-1, 2)
         centers = np.array([np.minimum(centers[:, 0], a - half_size),
                             np.minimum(centers[:, 1], b - half_size)]).T
 
