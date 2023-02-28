@@ -9,11 +9,13 @@
 """
 
 import re
+from functools import partial
 from typing import Any, Union
 
+from scipy.spatial.distance import pdist, squareform, cdist
 import tensorflow as tf
 
-from codes.training.metrics import compute_ADE_joint, compute_CR, compute_FDE_joint
+from codes.training.metrics import compute_CR
 
 
 def apply(loss_list: list[Union[str, Any]],
@@ -48,13 +50,13 @@ def apply(loss_list: list[Union[str, Any]],
                     tf.stack(weights) *
                     tf.stack(diff(model_outputs[0], labels, order)))
 
-            # elif re.match('sade', loss):
-            #     loss_dict['sADE({})'.format(mode)] = compute_ADE_joint(
-            #             model_outputs[0], labels)
-            #
-            # elif re.match('sfde', loss):
-            #     loss_dict['sFDE({})'.format(mode)] = compute_FDE_joint(
-            #             model_outputs[0], labels)
+            elif re.match('sade', loss):
+                loss_dict['sADE({})'.format(mode)] = sADE(
+                        model_outputs[0], labels)
+
+            elif re.match('sfde', loss):
+                loss_dict['sFDE({})'.format(mode)] = sFDE(
+                        model_outputs[0], labels)
 
             elif re.match('col_pred_mean', loss):
                 collision = partial(compute_CR, aggregation='mean')
@@ -87,6 +89,33 @@ def apply(loss_list: list[Union[str, Any]],
     return summary, loss_dict
 
 
+def sADE(pred: tf.Tensor, GT: tf.Tensor) -> tf.Tensor:
+    """
+    Calculate `ADE` or `minADE`.
+
+    :param pred: pred traj, shape = `[batch, (K), pred, 2]`
+    :param GT: ground truth future traj, shape = `[batch, pred, 2]`
+    :return loss_ade:
+        Return `ADE` when input_shape = [batch, pred_frames, 2];
+        Return `minADE` when input_shape = [batch, K, pred_frames, 2].
+    """
+
+    pred = tf.cast(pred, tf.float32)
+    GT = tf.cast(GT, tf.float32)
+
+    if pred.ndim == 3:
+        pred = pred[:, tf.newaxis, :, :]
+
+    all_ade = tf.reduce_mean(
+            tf.linalg.norm(
+                    pred - GT[:, tf.newaxis, :, :],
+                    ord=2, axis=-1
+            ), axis=-1)
+    avg_ade = tf.reduce_mean(all_ade, axis=0)  # avg over peds in scene
+    best_ade = tf.reduce_min(avg_ade)  # min over samples
+    return best_ade
+
+
 def ADE(pred: tf.Tensor, GT: tf.Tensor) -> tf.Tensor:
     """
     Calculate `ADE` or `minADE`.
@@ -112,6 +141,23 @@ def ADE(pred: tf.Tensor, GT: tf.Tensor) -> tf.Tensor:
     best_ade = tf.reduce_min(all_ade, axis=1)
     return tf.reduce_mean(best_ade)
 
+def sFDE(pred, GT) -> tf.Tensor:
+    """
+    Calculate `FDE` or `minFDE`
+
+    :param pred: pred traj, shape = `[batch, pred, 2]`
+    :param GT: ground truth future traj, shape = `[batch, pred, 2]`
+    :return fde:
+        Return `FDE` when input_shape = [batch, pred_frames, 2];
+        Return `minFDE` when input_shape = [batch, K, pred_frames, 2].
+    """
+    pred = tf.cast(pred, tf.float32)
+    GT = tf.cast(GT, tf.float32)
+
+    t = pred.shape[-2]
+    f = tf.gather(pred, [t-1], axis=-2)
+    f_gt = tf.gather(GT, [t-1], axis=-2)
+    return sADE(f, f_gt)
 
 def FDE(pred, GT) -> tf.Tensor:
     """

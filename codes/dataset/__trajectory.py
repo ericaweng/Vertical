@@ -106,7 +106,8 @@ class Trajectory():
                matrix,
                frame_step=1,
                max_neighbor=15,
-               add_noise=False) -> Agent:
+               add_noise=False,
+               seq_name=None) -> Agent:
         """
         Sample training data from the trajectory.
 
@@ -132,7 +133,8 @@ class Trajectory():
                                  obs_frame=obs_frame,
                                  end_frame=end_frame,
                                  frame_step=frame_step,
-                                 add_noise=add_noise)
+                                 add_noise=add_noise,
+                                 seq_name=seq_name)
 
 
 def calculate_length(vec1):

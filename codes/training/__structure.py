@@ -41,12 +41,10 @@ class Structure(BaseObject):
         # self.set_loss('sade')
         self.set_loss('ade')
         self.set_loss_weights(1.0)
-        self.set_metrics('ade', 'fde')#, 'sade', 'sfde', 'col_pred_mean', 'col_pred_max')
-        self.set_metrics_weights(1.0, 0.0)
-        # self.set_metrics_weights(0.0, 0.0, 1., 0., 0., 0.)
-
-        self.set_metrics('ade', 'fde')
-        self.set_metrics_weights(1.0, 0.0)
+        # self.set_metrics('ade', 'fde')
+        self.set_metrics('ade', 'fde', 'sade', 'sfde')#, 'col_pred_mean', 'col_pred_max')
+        # self.set_metrics_weights(1.0, 0.0)
+        self.set_metrics_weights(0.0, 0.0, 1., 0.0)#, 0., 0.)
 
     def set_inputs(self, *args):
         """
@@ -83,6 +81,10 @@ class Structure(BaseObject):
             elif 'gt' in item or \
                     'pred' in item:
                 self.model_inputs.append('GT')
+
+            # self.model_inputs.append('SEQNAME')
+            # self.model_inputs.append('FRAMEID')
+            # self.model_inputs.append('PEDID')
 
     def set_labels(self, *args):
         """
@@ -415,7 +417,8 @@ class Structure(BaseObject):
 
             epoch = (batch_id * self.args.batch_size) // train_number
             loss, loss_dict, loss_move = self.gradient_operations(
-                inputs=dat[:-1],
+                inputs=dat[:-1],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
+                # inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
                 labels=dat[-1],
                 loss_move_average=loss_move,
                 epoch=epoch,
@@ -488,7 +491,7 @@ class Structure(BaseObject):
         ds_test = self.load_test_dataset(agents)
 
         # Run test
-        outputs, labels, obses, metrics, metrics_dict = self.__test_on_dataset(
+        outputs, labels, obses, frame_ids, ped_ids, seq_names, metrics, metrics_dict = self.__test_on_dataset(
             ds=ds_test,
             return_results=True,
             show_timebar=True,
@@ -506,10 +509,7 @@ class Structure(BaseObject):
                                 agents=agents,
                                 dataset=dataset)
 
-        # save trajectories to standard format
-        frames = []
-        ped_ids_list = []
-        seq_names = []
+        # sanity checks for same dataset size as the standard
         dset_to_num_peds = {
             'eth': 364,
             'hotel': 1197, # but has 1075
@@ -520,45 +520,80 @@ class Structure(BaseObject):
         }
         assert dset_to_num_peds[dataset] == len(outputs[0]), \
             f'{dataset} should have {dset_to_num_peds[dataset]} peds but has {len(outputs[0])}'
+
+        # for seq in seq_names:
+        #     idxs = np.where(seq_names == seq)[0]
+        #     print("idxs:", idxs)
+        #     import ipdb; ipdb.set_trace()
+        #     out = outputs[idxs]
+        #     lbl = labels[idxs]
+        #     obs = obses[idxs]
+        #     fram = frame_ids[idxs]
+        #     ped = ped_ids[idxs]
+        #     print('out:', lbl)
+        #     print("obs:", obs)
+        #     print('lbl:', lbl)
+        #     print("fram:", fram)
+        #     print("ped:", ped)
+        #     import ipdb; ipdb.set_trace()
+        #     sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: x[-1])
+        #
+
+        frame_ids = []
+        ped_ids = []
+        seq_names = []
         dset_dir = f'data/peds_per_scene/{dataset}'
-        for seq in os.listdir(dset_dir):
+        sdd_scenes = os.listdir(dset_dir)
+        for seq in sdd_scenes:
             with open(os.path.join(dset_dir, seq), 'r') as f:
                 for line in f.read().splitlines():
                     data = line.split(' ')
                     seq_names.append(data[0])
                     num_frames = int(data[1])
                     num_peds = int(data[2])
-                    frames.append(data[3:3+num_frames])
-                    ped_ids_list.append(data[3+num_frames:3+num_frames+num_peds])
+                    frame_ids.append(data[3:3+num_frames])
+                    ped_ids.append(data[3+num_frames:3+num_frames+num_peds])
                     assert len(data) == 3+num_frames+num_peds, f'len(data) ({len(data)}) != {3+num_frames+num_peds}'
-        # for dset_outputs, dset_labels in zip(outputs, labels):
+        peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids]).tolist()
+
+        # save trajectories to standard format
+        assert len(obses) == 1, "only one scene supported"
+        assert len(outputs) == 1, "only one scene supported"
+        assert len(labels) == 1, "only one scene supported"
         obs = obses[0]
         offset = obs[:, -1:, :]
-        print("[:,.shape:", obs.shape)
         dset_outputs = outputs[0] + offset[:, tf.newaxis, :, :]
         dset_labels = labels[0] + offset
-        peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids_list]).tolist()
+        # import ipdb; ipdb.set_trace()
+        if dataset == 'sdd':
+            obs = obs * 100
+            dset_outputs = dset_outputs * 100
+            dset_labels = dset_labels * 100
+
         save_path = '../trajectory_reward/results/trajectories/vv'
         if dataset == 'sdd':
-            save_path += '/sdd'
-        for s, e, ped_ids, frame_ids, seq_name in tqdm(zip([0]+peds_per_seq[:-1], peds_per_seq, ped_ids_list, frames,
+            save_path += '/trajnet_sdd'
+        for s, e, ped_ids, frame_ids, seq_name in tqdm(zip([0]+peds_per_seq[:-1], peds_per_seq, ped_ids, frame_ids,
                                                            seq_names), desc='Saving trajectories...', total=len(peds_per_seq)):
-            pred = np.flip(dset_outputs[s:e].numpy().transpose(1,2,0,3), -1)  # --> (20, 12, num_peds, 2) + flip x and y
-            flattened_gt = self.flatten_scene(np.flip(dset_labels[s:e].numpy().transpose(1,0,2), -1),
-                                              frame_ids[self.args.obs_frames:], ped_ids)  # --> (12, num_peds, 2)
-            flattened_obs = self.flatten_scene(np.flip(obs[s:e].numpy().transpose(1,0,2), -1),
-                                               frame_ids[:self.args.obs_frames], ped_ids)  # --> (8, num_peds, 2)
+            # check that the seqs metadata and agents match
+            pred = np.flip(dset_outputs[s:e].numpy().transpose(1,0,2,3), -1)  # --> (20, 12, num_peds, 2) + flip x and y
+            flattened_gt = self.flatten_scene(np.flip(dset_labels[s:e].numpy(), -1),  # --> (num_peds, 12, 2)
+                                              frame_ids[self.args.obs_frames:], ped_ids)
+            flattened_obs = self.flatten_scene(np.flip(obs[s:e].numpy(), -1),  # --> (num_peds, 8, 2)
+                                               frame_ids[:self.args.obs_frames], ped_ids)
+            # todo save correct ped_ids and frame_ids
+            # import ipdb; ipdb.set_trace()
             for sample_i, sample in enumerate(pred):
                 flattened_peds = self.flatten_scene(sample, frame_ids[self.args.obs_frames:], ped_ids)
                 self.save_trajectories(flattened_peds, save_path, seq_name, frame_ids[self.args.obs_frames-1],
                                        suffix=f'/sample_{sample_i:03d}')
             self.save_trajectories(flattened_gt, save_path, seq_name, frame_ids[self.args.obs_frames-1], suffix='/gt')
             self.save_trajectories(flattened_obs, save_path, seq_name, frame_ids[self.args.obs_frames - 1], suffix='/obs')
-        print(f"saved {len(frames)} trajectories to {save_path}")
+        print(f"saved {len(frame_ids)} trajectories to {save_path}")
 
     @staticmethod
     def flatten_scene(trajs_arr, frame_nums=None, ped_nums=None, frame_skip=10):
-        """flattens a 3d scene of shape (ts, num_peds, 2) into a 2d array of shape (ts x num_peds, 4)
+        """flattens a 3d scene of shape (num_peds, ts, 2) into a 2d array of shape (num_peds, ts x 4)
         ped_nums (optional): list of ped numbers to assign, length == num_peds
         frame_nums (optional): list of frame numbers to assign to the resulting, length == ts
         """
@@ -566,8 +601,8 @@ class Structure(BaseObject):
             ped_nums = np.arange(0, trajs_arr.shape[1])
         if frame_nums is None:
             frame_nums = np.arange(0, trajs_arr.shape[0] * frame_skip, frame_skip)
-        frame_ids = np.tile(np.array(frame_nums).reshape(-1, 1), (1, trajs_arr.shape[1])).reshape(-1, 1)
-        ped_ids = np.tile(np.array(ped_nums).reshape(1, -1), (trajs_arr.shape[0], 1)).reshape(-1, 1)
+        ped_ids = np.tile(np.array(ped_nums).reshape(-1, 1), (1, trajs_arr.shape[1])).reshape(-1, 1)
+        frame_ids = np.tile(np.array(frame_nums).reshape(1, -1), (trajs_arr.shape[0], 1)).reshape(-1, 1)
         trajs_arr = np.concatenate([frame_ids, ped_ids, trajs_arr.reshape(-1, 2)], -1)
         return trajs_arr
 
@@ -598,6 +633,7 @@ class Structure(BaseObject):
         obs_all = []
         labels_all = []
         metrics_all = []
+        frame_ids_all, ped_ids_all, seq_names_all = [], [], []
         metrics_dict_all = {}
 
         # divide with batch size
@@ -611,14 +647,17 @@ class Structure(BaseObject):
         test_numbers = []
         for dat in timebar:
             outputs, metrics, metrics_dict = self.model_validate(
-                inputs=dat[:-1],
+                inputs=dat[:-1],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
+                # inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
                 labels=dat[-1],
                 training=False,
             )
-
             test_numbers.append(outputs[0].shape[0])
 
             if return_results:
+                seq_names_all = append_results_to_list(dat[-4:-3], seq_names_all)
+                frame_ids_all = append_results_to_list(dat[-3:-2], frame_ids_all)
+                ped_ids_all = append_results_to_list(dat[-2:-1], ped_ids_all)
                 obs_all = append_results_to_list(dat[:1], obs_all)
                 outputs_all = append_results_to_list(outputs, outputs_all)
                 labels_all = append_results_to_list(dat[-1:], labels_all)
@@ -642,7 +681,7 @@ class Structure(BaseObject):
                  tf.reduce_sum(weights)).numpy()
 
         if return_results:
-            return outputs_all, labels_all, obs_all, metrics_all, metrics_dict_all
+            return outputs_all, labels_all, obs_all, frame_ids_all, ped_ids_all, seq_names_all, metrics_all, metrics_dict_all
         else:
             return metrics_all, metrics_dict_all
 

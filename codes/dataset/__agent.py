@@ -62,9 +62,13 @@ class Agent():
                    'neighbor_number',
                    'neighbor_traj',
                    'neighbor_traj_linear_pred',
-                   'obs_length', 'total_frame']
+                   'obs_length', 'total_frame',
+                   '_seq_name', '_ped_ids']
     
     def __init__(self):
+        self._seq_name = None
+        self._ped_ids = None
+
         self._traj = []
         self._traj_future = []
 
@@ -95,6 +99,12 @@ class Agent():
         """
         return self._traj
 
+    @property
+    def seq_name(self) -> str:
+        return self._seq_name
+    @property
+    def ped_ids(self) -> int:
+        return self._ped_ids
     @traj.setter
     def traj(self, value):
         self._traj = np.array(value).astype(np.float32)
@@ -192,7 +202,8 @@ class Agent():
                   obs_frame, end_frame,
                   frame_step=1,
                   add_noise=False,
-                  linear_predict=True):
+                  linear_predict=True,
+                  seq_name=None):
         """
         Make one training data.
 
@@ -202,6 +213,7 @@ class Agent():
         are `(end_frame - start_frame) // frame_step`.
         """
 
+        self.seq_name = seq_name
         self.linear_predict = linear_predict
 
         # Trajectory info
@@ -255,6 +267,10 @@ class Agent():
 
     def get_pred_traj_neighbor_linear(self) -> list:
         return self.neighbor_traj_linear_pred
+
+    @seq_name.setter
+    def seq_name(self, value):
+        self._seq_name = value
 
 
 def softmax(x):

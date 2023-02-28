@@ -35,6 +35,12 @@ def get_inputs_by_type(input_agents: list[Agent],
         call = _get_dest_traj
     elif type_name == 'GT':
         call = _get_gt_traj
+    elif type_name == 'SEQNAME':
+        call = _get_seq_name
+    elif type_name == 'FRAMEID':
+        call = _get_frames
+    elif type_name == 'PEDID':
+        call = _get_ped_ids
     return call(input_agents)
 
 
@@ -49,6 +55,42 @@ def _get_obs_traj(input_agents: list[Agent]) -> tf.Tensor:
     for agent in tqdm(input_agents, 'Prepare trajectories...'):
         inputs.append(agent.traj)
     return tf.cast(inputs, tf.float32)
+
+def _get_ped_ids(input_agents: list[Agent]) -> tf.Tensor:
+    """
+    Get sequence names from agents.
+
+    :param input_agents: a list of input agents, type = `list[Agent]`
+    :return inputs: a Tensor of sequence names
+    """
+    inputs = []
+    for agent in tqdm(input_agents, 'Getting agent ids...'):
+        inputs.append(0)
+    return tf.cast(inputs, tf.int32)
+
+def _get_frames(input_agents: list[Agent]) -> tf.Tensor:
+    """
+    Get sequence names from agents.
+
+    :param input_agents: a list of input agents, type = `list[Agent]`
+    :return inputs: a Tensor of sequence names
+    """
+    inputs = []
+    for agent in tqdm(input_agents, 'Getting agent frame ids...'):
+        inputs.append(agent.frames)
+    return tf.cast(inputs, tf.int32)
+
+def _get_seq_name(input_agents: list[Agent]) -> tf.Tensor:
+    """
+    Get sequence names from agents.
+
+    :param input_agents: a list of input agents, type = `list[Agent]`
+    :return inputs: a Tensor of sequence names
+    """
+    inputs = []
+    for agent in tqdm(input_agents, 'Getting seq names...'):
+        inputs.append(agent.seq_name)
+    return tf.cast(inputs, tf.string)
 
 
 def _get_gt_traj(input_agents: list[Agent],

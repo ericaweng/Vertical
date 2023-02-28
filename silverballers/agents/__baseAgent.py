@@ -63,6 +63,14 @@ class BaseAgentStructure(C.training.Structure):
                                id_depth=self.args.depth,
                                keypoints_number=self.p_len,
                                structure=self)
+    def scene_l2_loss(self, outputs: list[tf.Tensor],
+                      labels: tf.Tensor,
+                      *args, **kwargs) -> tf.Tensor:
+        """
+        L2 distance between predictions and labels on predicted key points, minned across scenes rather than agents
+        """
+        labels_pickled = tf.gather(labels, self.p_index, axis=1)
+        return C.training.loss.sADE(outputs[0], labels_pickled)
 
     def l2_loss(self, outputs: list[tf.Tensor],
                 labels: tf.Tensor,
@@ -72,6 +80,32 @@ class BaseAgentStructure(C.training.Structure):
         """
         labels_pickled = tf.gather(labels, self.p_index, axis=1)
         return C.training.loss.ADE(outputs[0], labels_pickled)
+
+    def min_sADE(self, outputs: list[tf.Tensor],
+                labels: tf.Tensor,
+                *args, **kwargs) -> tf.Tensor:
+        """
+        minimum sADE among all predictions
+        """
+        # shape = (batch, Kc*K)
+        distance = tf.linalg.norm(
+            outputs[0][:, :, :, :] -
+            tf.expand_dims(labels[:, :, :], 1), axis=-1)
+
+        return tf.reduce_min(tf.reduce_mean(tf.reduce_mean(distance, axis=0), axis=-1))
+
+    def min_sFDE(self, outputs: list[tf.Tensor],
+                labels: tf.Tensor,
+                *args, **kwargs) -> tf.Tensor:
+        """
+        minimum sFDE among all predictions
+        """
+        # shape = (batch, Kc*K)
+        distance = tf.linalg.norm(
+            outputs[0][:, :, -1, :] -
+            tf.expand_dims(labels[:, -1, :], 1), axis=-1)
+
+        return tf.reduce_min(tf.reduce_mean(distance, axis=0))
 
     def min_FDE(self, outputs: list[tf.Tensor],
                 labels: tf.Tensor,

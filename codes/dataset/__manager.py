@@ -223,7 +223,8 @@ class VideoClipManager(BaseObject):
                                                        end_frame=end,
                                                        matrix=self.matrix,
                                                        frame_step=frame_step,
-                                                       add_noise=False))
+                                                       add_noise=False,
+                                                       seq_name=self.name,))
 
         return train_samples
 
