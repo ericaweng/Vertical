@@ -124,6 +124,14 @@ class HandlerArgs(C.args.BaseArgTable):
         """
         return self._get('key_points', 'null', argtype='static')
 
+    @property
+    def loss_type(self) -> str:
+        """
+        Loss type used to train the model.
+        """
+        return self._get('loss_type', 'ade', argtype='static')
+
+
 
 class SilverballersArgs(C.args.BaseArgTable):
 

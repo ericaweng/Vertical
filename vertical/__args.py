@@ -79,3 +79,10 @@ class VArgs(BaseArgTable):
         - the third bit: `ROTATE` trajectories.
         """
         return self._get('preprocess', '111', argtype='static')
+
+    @property
+    def keypoints_loss_type(self):
+        """
+        Type of loss function for key points (VA).
+        """
+        return self._get('keypoints_loss_type', 'ade', argtype='static')

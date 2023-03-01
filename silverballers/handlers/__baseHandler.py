@@ -122,25 +122,26 @@ class BaseHandlerStructure(C.training.Structure):
         self.set_inputs('trajs', 'maps', 'paras', 'gt')
         self.set_labels('gt')
 
-        self.set_loss('sade', 'diff')
+        self.set_loss(self.args.loss_type, 'diff')
         # self.set_loss('ade', 'diff')
         self.set_loss_weights(0.8, 0.2)
-        # self.set_loss_weights(0.8, 0.2)
 
         if self.args.key_points == 'null':
-            self.set_metrics('sade', 'sfde')
             # self.set_metrics('ade', 'fde')
-            self.set_metrics_weights(1.0, 0.0)
             # self.set_metrics_weights(1.0, 0.0)
-
+            metrics = ['ade', 'fde', 'sade', 'sfde']
+            self.set_metrics(*metrics)
+            self.set_metrics_weights(0.0, 0.0, 1.0, 0.0)
         else:
+            import ipdb; ipdb.set_trace()
             key_points = self.args.key_points
             pi = [int(i) for i in key_points.split('_')]
             self.keypoints_index = tf.cast(pi, tf.int32)
-
-            self.set_metrics('sade', 'sfde', self.l2_keypoints)
-            # self.set_metrics('ade', 'fde', self.l2_keypoints)
-            self.set_metrics_weights(1.0, 0.0, 0.0)
+            # if self.args.loss_type == 'sade' or self.args.loss_type == 'sfde':
+            self.set_metrics('ade', 'fde', 'sade', 'sfde', self.l2_keypoints)
+            # else:
+            #     self.set_metrics('ade', 'fde', self.l2_keypoints)
+            self.set_metrics_weights(1.0, 0.0, 0.0, 0.0, 0.0)
 
     def set_model_type(self, new_type: type[BaseHandlerModel]):
         self.model_type = new_type
@@ -151,6 +152,18 @@ class BaseHandlerStructure(C.training.Structure):
                                key_points=self.args.key_points,
                                structure=self,
                                *args, **kwargs)
+
+    def scene_l2_keypoints(self, outputs: list[tf.Tensor],
+                     labels: tf.Tensor,
+                     *args, **kwargs) -> tf.Tensor:
+        """
+        l2 loss on the keypoints
+        """
+        # shapes of pickled tensors are (batch, n_key, 2)
+        labels_pickled = tf.gather(labels, self.keypoints_index, axis=1)
+        pred_pickled = tf.gather(outputs[0], self.keypoints_index, axis=1)
+
+        return C.training.loss.sADE(pred_pickled, labels_pickled)
 
     def l2_keypoints(self, outputs: list[tf.Tensor],
                      labels: tf.Tensor,
@@ -163,4 +176,3 @@ class BaseHandlerStructure(C.training.Structure):
         pred_pickled = tf.gather(outputs[0], self.keypoints_index, axis=1)
 
         return C.training.loss.ADE(pred_pickled, labels_pickled)
-        # return C.training.loss.sADE(pred_pickled, labels_pickled)

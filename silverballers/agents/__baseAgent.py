@@ -35,7 +35,7 @@ class BaseAgentStructure(C.training.Structure):
         elif self.args.metric == 'ade':
             self.set_metrics(self.l2_loss)
         else:
-            raise ValueError(self.log('Metric error!', level='error'))
+            print('val save metric not set, make sure it is set')
 
         self.set_metrics_weights(1.0)
 
@@ -92,7 +92,7 @@ class BaseAgentStructure(C.training.Structure):
             outputs[0][:, :, :, :] -
             tf.expand_dims(labels[:, :, :], 1), axis=-1)
 
-        return tf.reduce_min(tf.reduce_mean(tf.reduce_mean(distance, axis=0), axis=-1))
+        return tf.reduce_min(tf.reduce_mean(tf.reduce_mean(distance, axis=-1), axis=0))
 
     def min_sFDE(self, outputs: list[tf.Tensor],
                 labels: tf.Tensor,
@@ -106,6 +106,20 @@ class BaseAgentStructure(C.training.Structure):
             tf.expand_dims(labels[:, -1, :], 1), axis=-1)
 
         return tf.reduce_min(tf.reduce_mean(distance, axis=0))
+
+    def min_ADE(self, outputs: list[tf.Tensor],
+                labels: tf.Tensor,
+                *args, **kwargs) -> tf.Tensor:
+        """
+        minimum sADE among all predictions
+        todo require broadcastable shapes... prob can't use this loss
+        """
+        # shape = (batch, Kc*K)
+        distance = tf.linalg.norm(
+            outputs[0][:, :, :, :] -
+            tf.expand_dims(labels[:, :, :], 1), axis=-1)
+
+        return tf.reduce_mean(tf.reduce_min(tf.reduce_mean(distance, axis=-1), axis=-1))
 
     def min_FDE(self, outputs: list[tf.Tensor],
                 labels: tf.Tensor,

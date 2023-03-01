@@ -137,7 +137,7 @@ class VA(BaseAgentStructure):
 
     def __init__(self, terminal_args: list[str]):
         super().__init__(terminal_args)
-
+        val_save_metric = self.args.metric
         self.args = VArgs(terminal_args)
         self.important_args = self.important_args[:-4]
         self.important_args += ['Kc']
@@ -145,12 +145,30 @@ class VA(BaseAgentStructure):
         self.set_inputs('traj')
         self.set_labels('gt')
 
-        self.set_loss(self.scene_l2_loss)
-        # self.set_loss(self.l2_loss)
+        # loss_type_to_func = {
+        #         'sade': self.scene_l2_loss,
+        #         'ade': self.l2_loss,
+        #         'fde': self.min_FDE,
+        #         'sfde': self.min_sFDE,
+        # }
+        if self.args.keypoints_loss_type == 'sade':
+            self.set_loss(self.scene_l2_loss)  # loss on keypoints
+        elif self.args.keypoints_loss_type == 'ade':
+            self.set_loss(self.l2_loss)
+        else:
+            raise ValueError(f"VA loss type {self.args.keypoints_loss_type} is not supported")
         self.set_loss_weights(1.0)
+        print(f"VA keypoints loss type: {self.args.keypoints_loss_type}")
 
-        self.set_metrics(self.min_sFDE)
-        # self.set_metrics(self.min_FDE)
-        self.set_metrics_weights(1.0)
+        self.set_metrics(self.min_FDE, self.min_sFDE)
+        if val_save_metric == 'fde':
+            self.set_metrics_weights(1.0, 0.0)
+        elif val_save_metric == 'sfde':
+            self.set_metrics_weights(0.0, 1.0)
+        else:
+            raise ValueError(f"VA metrics type {val_save_metric} is not supported")
+
+        print(f"VA metrics weights: {self.metrics_weights}")
+        print('\n\n\n')
 
         self.set_model_type(new_type=VAModel)

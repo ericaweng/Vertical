@@ -29,16 +29,10 @@ def apply(loss_list: list[Union[str, Any]],
     for loss in loss_list:
         if type(loss) == str:
             if re.match('[Aa][Dd][Ee]', loss):
-                # print('loss', loss)
-                # print('model_outputs[0]', model_outputs[0].shape)
-                # print('labels', labels.shape)
                 loss_dict['ADE({})'.format(mode)] = ADE(model_outputs[0], labels)
-                # print('loss_dict', loss_dict['ADE({})'.format(mode)])
-                # import ipdb; ipdb.set_trace()
 
             elif re.match('[Ff][Dd][Ee]', loss):
-                loss_dict['FDE({})'.format(mode)] = FDE(
-                    model_outputs[0], labels)
+                loss_dict['FDE({})'.format(mode)] = FDE(model_outputs[0], labels)
 
             elif re.match('[Dd][Ii][Ff]', loss):
                 order = 2 if not 'diff_order' in kwargs.keys() \
@@ -51,27 +45,21 @@ def apply(loss_list: list[Union[str, Any]],
                     tf.stack(diff(model_outputs[0], labels, order)))
 
             elif re.match('sade', loss):
-                loss_dict['sADE({})'.format(mode)] = sADE(
-                        model_outputs[0], labels)
+                loss_dict['sADE({})'.format(mode)] = sADE(model_outputs[0], labels)
 
             elif re.match('sfde', loss):
-                loss_dict['sFDE({})'.format(mode)] = sFDE(
-                        model_outputs[0], labels)
+                loss_dict['sFDE({})'.format(mode)] = sFDE(model_outputs[0], labels)
 
             elif re.match('col_pred_mean', loss):
                 collision = partial(compute_CR, aggregation='mean')
-                loss_dict['col_pred_mean({})'.format(mode)] = collision(
-                        model_outputs[0], labels)
+                loss_dict['col_pred_mean({})'.format(mode)] = collision(model_outputs[0], labels)
 
             elif re.match('col_pred_max', loss):
                 collision = partial(compute_CR, aggregation='max')
-                loss_dict['col_pred_max({})'.format(mode)] = collision(
-                        model_outputs[0], labels)
+                loss_dict['col_pred_max({})'.format(mode)] = collision(model_outputs[0], labels)
 
             else:
                 raise NotImplementedError('loss type `{}` is not supported.'.format(loss))
-            # print("loss", loss)
-            # import ipdb; ipdb.set_trace()
 
         elif callable(loss):
             loss_dict[loss.__name__ + '({})'.format(mode)] = loss(model_outputs, labels,
