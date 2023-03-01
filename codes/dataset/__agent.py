@@ -63,11 +63,11 @@ class Agent():
                    'neighbor_traj',
                    'neighbor_traj_linear_pred',
                    'obs_length', 'total_frame',
-                   '_seq_name', '_ped_ids']
+                   '_seq_name', '_ped_id']
     
     def __init__(self):
+        self._ped_id = None
         self._seq_name = None
-        self._ped_ids = None
 
         self._traj = []
         self._traj_future = []
@@ -102,9 +102,11 @@ class Agent():
     @property
     def seq_name(self) -> str:
         return self._seq_name
+
     @property
-    def ped_ids(self) -> int:
-        return self._ped_ids
+    def ped_id(self) -> int:
+        return self._ped_id
+
     @traj.setter
     def traj(self, value):
         self._traj = np.array(value).astype(np.float32)
@@ -197,7 +199,7 @@ class Agent():
         return self
 
     def init_data(self, target_traj, 
-                  neighbors_traj,
+                  neighbors_traj, ped_id,
                   frames, start_frame,
                   obs_frame, end_frame,
                   frame_step=1,
@@ -213,6 +215,7 @@ class Agent():
         are `(end_frame - start_frame) // frame_step`.
         """
 
+        self.ped_id = ped_id
         self.seq_name = seq_name
         self.linear_predict = linear_predict
 
@@ -271,6 +274,10 @@ class Agent():
     @seq_name.setter
     def seq_name(self, value):
         self._seq_name = value
+
+    @ped_id.setter
+    def ped_id(self, value):
+        self._ped_id = value
 
 
 def softmax(x):

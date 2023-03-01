@@ -145,12 +145,12 @@ class VA(BaseAgentStructure):
         self.set_inputs('traj')
         self.set_labels('gt')
 
-        # self.set_loss(self.scene_l2_loss)
-        self.set_loss(self.l2_loss)
+        self.set_loss(self.scene_l2_loss)
+        # self.set_loss(self.l2_loss)
         self.set_loss_weights(1.0)
 
-        # self.set_metrics(self.sFDE)
-        self.set_metrics(self.min_FDE)
+        self.set_metrics(self.min_sFDE)
+        # self.set_metrics(self.min_FDE)
         self.set_metrics_weights(1.0)
 
         self.set_model_type(new_type=VAModel)

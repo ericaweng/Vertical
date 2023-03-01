@@ -38,13 +38,13 @@ class Structure(BaseObject):
         self.set_inputs('obs')
         self.set_labels('pred')
 
-        # self.set_loss('sade')
-        self.set_loss('ade')
+        self.set_loss('sade')
+        # self.set_loss('ade')
         self.set_loss_weights(1.0)
         # self.set_metrics('ade', 'fde')
-        self.set_metrics('ade', 'fde', 'sade', 'sfde')#, 'col_pred_mean', 'col_pred_max')
+        self.set_metrics('fde', 'sade', 'sfde')#, 'col_pred_mean', 'col_pred_max')
         # self.set_metrics_weights(1.0, 0.0)
-        self.set_metrics_weights(0.0, 0.0, 1., 0.0)#, 0., 0.)
+        self.set_metrics_weights(0.0, 1., 0.0)#, 0., 0.)
 
     def set_inputs(self, *args):
         """
@@ -81,10 +81,9 @@ class Structure(BaseObject):
             elif 'gt' in item or \
                     'pred' in item:
                 self.model_inputs.append('GT')
-
-            # self.model_inputs.append('SEQNAME')
-            # self.model_inputs.append('FRAMEID')
-            # self.model_inputs.append('PEDID')
+        # self.model_inputs.append('SEQNAME')
+        # self.model_inputs.append('FRAMEID')
+        # self.model_inputs.append('PEDID')
 
     def set_labels(self, *args):
         """
@@ -521,43 +520,46 @@ class Structure(BaseObject):
         assert dset_to_num_peds[dataset] == len(outputs[0]), \
             f'{dataset} should have {dset_to_num_peds[dataset]} peds but has {len(outputs[0])}'
 
-        # for seq in seq_names:
-        #     idxs = np.where(seq_names == seq)[0]
-        #     print("idxs:", idxs)
-        #     import ipdb; ipdb.set_trace()
-        #     out = outputs[idxs]
-        #     lbl = labels[idxs]
-        #     obs = obses[idxs]
-        #     fram = frame_ids[idxs]
-        #     ped = ped_ids[idxs]
-        #     print('out:', lbl)
-        #     print("obs:", obs)
-        #     print('lbl:', lbl)
-        #     print("fram:", fram)
-        #     print("ped:", ped)
-        #     import ipdb; ipdb.set_trace()
-        #     sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: x[-1])
-        #
+        seq_name_to_sorted_items = {}
+        assert len(seq_names) == 1, "only one scene supported"
+        for seq in seq_names[0]:
+            idxs = np.where(seq_names == seq)[0]
+            print("idxs:", idxs)
+            import ipdb; ipdb.set_trace()
+            out = outputs[idxs]
+            lbl = labels[idxs]
+            obs = obses[idxs]
+            fram = frame_ids[idxs]
+            ped = ped_ids[idxs]
+            print('out:', lbl)
+            print("obs:", obs)
+            print('lbl:', lbl)
+            print("fram:", fram)
+            print("ped:", ped)
+            import ipdb; ipdb.set_trace()
+            seq_name_to_sorted_items[seq] = sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: x[-1])
 
-        frame_ids = []
-        ped_ids = []
-        seq_names = []
-        dset_dir = f'data/peds_per_scene/{dataset}'
-        sdd_scenes = os.listdir(dset_dir)
-        for seq in sdd_scenes:
-            with open(os.path.join(dset_dir, seq), 'r') as f:
-                for line in f.read().splitlines():
-                    data = line.split(' ')
-                    seq_names.append(data[0])
-                    num_frames = int(data[1])
-                    num_peds = int(data[2])
-                    frame_ids.append(data[3:3+num_frames])
-                    ped_ids.append(data[3+num_frames:3+num_frames+num_peds])
-                    assert len(data) == 3+num_frames+num_peds, f'len(data) ({len(data)}) != {3+num_frames+num_peds}'
-        peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids]).tolist()
+        # frame_ids = []
+        # ped_ids = []
+        # seq_names = []
+        # dset_dir = f'data/peds_per_scene/{dataset}'
+        # sdd_scenes = os.listdir(dset_dir)
+        # for seq in sdd_scenes:
+        #     with open(os.path.join(dset_dir, seq), 'r') as f:
+        #         for line in f.read().splitlines():
+        #             data = line.split(' ')
+        #             seq_names.append(data[0])
+        #             num_frames = int(data[1])
+        #             num_peds = int(data[2])
+        #             frame_ids.append(data[3:3+num_frames])
+        #             ped_ids.append(data[3+num_frames:3+num_frames+num_peds])
+        #             assert len(data) == 3+num_frames+num_peds, f'len(data) ({len(data)}) != {3+num_frames+num_peds}'
+        # peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids]).tolist()
 
         # save trajectories to standard format
-        assert len(obses) == 1, "only one scene supported"
+        assert len(seq_names) == len(ped_ids) == len(frame_ids) == len(outputs) == len(labels) == len(obses) == 1, \
+            f'len(seq_names) ({len(seq_names)}) != len(ped_ids) ({len(ped_ids)}) != len(frame_ids) ({len(frame_ids)})' \
+            f' != len(outputs) ({len(outputs)}) != len(labels) ({len(labels)}) != len(obses) ({len(obses)}) != 1'
         assert len(outputs) == 1, "only one scene supported"
         assert len(labels) == 1, "only one scene supported"
         obs = obses[0]

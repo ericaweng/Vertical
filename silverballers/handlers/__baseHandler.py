@@ -122,19 +122,24 @@ class BaseHandlerStructure(C.training.Structure):
         self.set_inputs('trajs', 'maps', 'paras', 'gt')
         self.set_labels('gt')
 
-        self.set_loss('ade', 'diff')
+        self.set_loss('sade', 'diff')
+        # self.set_loss('ade', 'diff')
         self.set_loss_weights(0.8, 0.2)
+        # self.set_loss_weights(0.8, 0.2)
 
         if self.args.key_points == 'null':
-            self.set_metrics('ade', 'fde')
+            self.set_metrics('sade', 'sfde')
+            # self.set_metrics('ade', 'fde')
             self.set_metrics_weights(1.0, 0.0)
+            # self.set_metrics_weights(1.0, 0.0)
 
         else:
             key_points = self.args.key_points
             pi = [int(i) for i in key_points.split('_')]
             self.keypoints_index = tf.cast(pi, tf.int32)
 
-            self.set_metrics('ade', 'fde', self.l2_keypoints)
+            self.set_metrics('sade', 'sfde', self.l2_keypoints)
+            # self.set_metrics('ade', 'fde', self.l2_keypoints)
             self.set_metrics_weights(1.0, 0.0, 0.0)
 
     def set_model_type(self, new_type: type[BaseHandlerModel]):
@@ -158,3 +163,4 @@ class BaseHandlerStructure(C.training.Structure):
         pred_pickled = tf.gather(outputs[0], self.keypoints_index, axis=1)
 
         return C.training.loss.ADE(pred_pickled, labels_pickled)
+        # return C.training.loss.sADE(pred_pickled, labels_pickled)

@@ -115,6 +115,7 @@ class VideoClipManager(BaseObject):
             neighbors = dat['neighbors']
             matrix = dat['matrix']
             frames = dat['frames']
+            person_ids = dat['person_ids']
 
         # or start processing and then saving
         else:
@@ -149,28 +150,32 @@ class VideoClipManager(BaseObject):
 
             np.savez(npy_path,
                      neighbors=neighbors,
+                     person_ids=person_ids,
                      matrix=matrix,
                      frames=(frames := frame_ids))
 
         self.agent_count = matrix.shape[1]
         self.frame_number = matrix.shape[0]
 
-        return neighbors, matrix, frames
+        return neighbors, matrix, frames, person_ids
 
     def make_trajectories(self):
         """
         Make trajectories from the processed dataset files.
         """
         if len(self.custom_list) == 3:
+            import ipdb; ipdb.set_trace()
             self.neighbors, self.matrix, self.frames = self.custom_list
+            # self.neighbors, self.matrix, self.frames, self.person_ids = self.custom_list
         else:
-            self.neighbors, self.matrix, self.frames = self.process_metadata()
+            self.neighbors, self.matrix, self.frames, self.person_ids = self.process_metadata()
 
         trajs = []
         for person_index in range(self.agent_count):
             trajs.append(Trajectory(agent_index=person_index,
                                     trajectory=self.matrix[:, person_index, :],
                                     neighbors=self.neighbors,
+                                    person_id=self.person_ids[person_index],
                                     frames=self.frames,
                                     init_position=INIT_POSITION))
 

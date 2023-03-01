@@ -34,6 +34,7 @@ class Trajectory():
     def __init__(self, agent_index: int,
                  trajectory: np.ndarray,
                  neighbors: list[list[int]],
+                 person_id: list[int],
                  frames: list[int],
                  init_position: float):
         """
@@ -54,6 +55,7 @@ class Trajectory():
         self._agent_index = agent_index
         self._traj = trajectory  # matrix[:, agent_index, :]
         self._neighbors = neighbors
+        self._person_id = person_id
         self._frames = frames
 
         base = self.traj.T[0]
@@ -65,6 +67,10 @@ class Trajectory():
 
         self._start_frame = appear[0] + 1 if len(appear) else 0
         self._end_frame = disappear[0] + 1 if len(disappear) else len(base)
+
+    @property
+    def person_id(self):
+        return self._person_id
 
     @property
     def agent_index(self):
@@ -128,6 +134,7 @@ class Trajectory():
 
         return Agent().init_data(target_traj=tar_traj,
                                  neighbors_traj=nei_traj,
+                                 ped_id=self.person_id,
                                  frames=self.frames[start_frame:end_frame:frame_step],
                                  start_frame=start_frame,
                                  obs_frame=obs_frame,
