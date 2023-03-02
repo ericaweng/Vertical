@@ -7,28 +7,34 @@ import multiprocessing
 from pathlib import Path
 
 def get_cmds(args):
-    cmds = []
-    for dataset in 'hotel univ zara1 zara2 sdd'.split(): # sdd
-        cmd = f'python main.py --model va --key_points 3_7_11 --test_set {dataset}'  # --use_maps 0'
-        cmds.append(cmd)
-        cmd = f'python main.py --model vb --points 3 --test_set {dataset}'  # --use_maps 0'
-        cmds.append(cmd)
-        # cmd = f'python main.py  --model V  --loada ./weights/vertical/a_{dataset} --loadb ./weights/vertical/b_{dataset}'
-    cmds = [
+    if args.train:
+        cmds = []
+        for dataset in 'hotel univ zara1 zara2 sdd'.split(): # sdd
+            cmd = f'python main.py --model va --key_points 3_7_11 --test_set {dataset}'  # --use_maps 0'
+            cmds.append(cmd)
+            cmd = f'python main.py --model vb --points 3 --test_set {dataset}'  # --use_maps 0'
+            cmds.append(cmd)
+            # cmd = f'python main.py  --model V  --loada ./weights/vertical/a_{dataset} --loadb ./weights/vertical/b_{dataset}'
+        return cmds
+    if args.ade:
+        return [
             "python main.py   --model V --loada ./logs/20230225-190502modelvaeth   --loadb  ./logs/20230225-193323modelvbeth",
             "python main.py   --model V --loada ./logs/20230225-190739modelvahotel   --loadb ./logs/20230225-193331modelvbhotel",
             "python main.py   --model V --loada ./logs/20230225-193037modelvauniv  --loadb ./logs/20230225-192959modelvbuniv",
             "python main.py   --model V --loada ./logs/20230225-194144modelvazara1   --loadb   ./logs/20230225-194159modelvbzara1",
             "python main.py   --model V --loada ./logs/20230225-194045modelvazara2   --loadb ./logs/20230225-204854modelvbzara2",
             "python main.py   --model V --loada ./logs/20230227-123855modelvasdd  --loadb  ./logs/20230227-123842modelvbsdd" ]
-    #     cmds = """ipy main.py   --model V --loada ./logs/20230227-220653modelvaeth --loadb ./logs/20230227-230244modelvbeth
-    # ipy main.py   --model V --loada ./logs/20230227-230701modelvahotel --loadb ./logs/20230227-230701modelvbhotel
-    # ipy main.py   --model V --loada ./logs/20230227-230701modelvauniv --loadb ./logs/20230227-230701modelvbuniv
-    # ipy main.py   --model V --loada ./logs/20230227-230701modelvazara1 --loadb ./logs/20230227-230701modelvbzara1
-    # ipy main.py   --model V --loada ./logs/20230227-230701modelvazara2 --loadb ./logs/20230227-232350modelvbzara2
-    # ipy main.py   --model V --loada ./logs/20230227-233707modelvasdd --loadb ./logs/20230227-233707modelvbsdd""".replace(
-    #         'ipy', 'python').splitlines()
-    return cmds
+        return cmds
+    if args.sade:
+        return """ipy main.py   --model V --loada ./logs/20230227-220653modelvaeth --loadb ./logs/20230227-230244modelvbeth
+    ipy main.py   --model V --loada ./logs/20230227-230701modelvahotel --loadb ./logs/20230227-230701modelvbhotel
+    ipy main.py   --model V --loada ./logs/20230227-230701modelvauniv --loadb ./logs/20230227-230701modelvbuniv
+    ipy main.py   --model V --loada ./logs/20230227-230701modelvazara1 --loadb ./logs/20230227-230701modelvbzara1
+    ipy main.py   --model V --loada ./logs/20230227-230701modelvazara2 --loadb ./logs/20230227-232350modelvbzara2
+    ipy main.py   --model V --loada ./logs/20230227-233707modelvasdd --loadb ./logs/20230227-233707modelvbsdd""".replace(
+            'ipy', 'python').splitlines()
+    else:
+        raise ValueError('must specify --train or --ade or --sade')
 
 def spawn(cmds, args):
     """launch cmds in separate threads, max_cmds_at_a_time at a time, until no more cmds to launch"""
@@ -92,6 +98,9 @@ if __name__ == "__main__":
     parser.add_argument('--num_samples', '-ns', nargs='+', type=int, default=[20])
     parser.add_argument('--skip_existing', '-se', action='store_true')
     parser.add_argument('--glob_str', nargs='+', default=None)
+    parser.add_argument('--ade', action='store_true')
+    parser.add_argument('--sade', action='store_true')
+    parser.add_argument('--train', action='store_true')
 
     args = parser.parse_args()
     main(args)

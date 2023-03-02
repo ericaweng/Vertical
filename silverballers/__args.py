@@ -162,3 +162,8 @@ class SilverballersArgs(C.args.BaseArgTable):
         (given by args in the agent model).
         """
         return self._get('K', 1, argtype='dynamic')
+
+    @property
+    def save_traj_dir(self) -> int:
+        """base dir to save generated trajectories"""
+        return self._get('save_traj_dir', 'vv_', argtype='dynamic')

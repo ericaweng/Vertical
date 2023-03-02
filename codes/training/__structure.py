@@ -586,7 +586,7 @@ class Structure(BaseObject):
             # seq_name_to_sorted_items[seq] = sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: (x[-1], x[-2][-1]))  # get the last frame
 
         # save trajectories to standard format
-        save_path = '../trajectory_reward/results/trajectories/vv'
+        save_path = f'../trajectory_reward/results/trajectories/{self.args.save_traj_dir}'
         print("check save path:", save_path)
         # print("dir(self.args):")
         # print(dir(self.args))
@@ -599,9 +599,9 @@ class Structure(BaseObject):
                 assert np.all([np.all(frame_ids[0].numpy() == f for f in frame_ids)]), \
                     f'all 20 frame_ids should be the same for all peds but are {frame_ids}'
                 frame_ids = frame_ids[0].numpy()
-                offset = obs[:, -1:, :]
-                dset_outputs = out + offset[:, tf.newaxis, :, :]
-                dset_labels = lbl + offset
+                # offset = obs[:, -1:, :]
+                dset_outputs = out# + offset[:, tf.newaxis, :, :]
+                dset_labels = lbl# + offset
                 # import ipdb; ipdb.set_trace()
                 if dataset == 'sdd':
                     obs = obs * 100
