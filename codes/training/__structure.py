@@ -78,9 +78,9 @@ class Structure(BaseObject):
             elif 'gt' in item or \
                     'pred' in item:
                 self.model_inputs.append('GT')
-        # self.model_inputs.append('SEQNAME')
-        # self.model_inputs.append('FRAMEID')
-        # self.model_inputs.append('PEDID')
+        self.model_inputs.append('SEQNAME')
+        self.model_inputs.append('FRAMEID')
+        self.model_inputs.append('PEDID')
 
     def set_labels(self, *args):
         """
@@ -500,6 +500,9 @@ class Structure(BaseObject):
         outputs = stack_results(outputs)
         labels = stack_results(labels)
         obses = stack_results(obses)
+        frame_ids = stack_results(frame_ids)
+        ped_ids = stack_results(ped_ids)
+        seq_names = stack_results(seq_names)
 
         self.write_test_results(outputs=outputs,
                                 agents=agents,
@@ -514,81 +517,112 @@ class Structure(BaseObject):
             'zara2': 5910,
             'sdd': 2829,
         }
+        dset_to_num_frames = {
+            'eth': 253,
+            'hotel': 445, # but has 1075
+            'univ': 425 + 522,
+            'zara1': 705,
+            'zara2': 998,
+            'sdd': 1999,
+        }
+        SEQUENCE_NAMES = {
+            'eth': ['biwi_eth'],
+            'hotel': ['biwi_hotel'],
+            'zara1': ['crowds_zara01'],
+            'zara2': ['crowds_zara02'],
+            'univ': ['students001', 'students003'],
+            'sdd': [
+                'coupa_0', 'coupa_1', 'gates_2', 'hyang_0', 'hyang_1', 'hyang_3',
+                'hyang_8', 'little_0', 'little_1', 'little_2', 'little_3',
+                'nexus_5', 'nexus_6', 'quad_0', 'quad_1', 'quad_2', 'quad_3',
+            ],
+        }
         assert dset_to_num_peds[dataset] == len(outputs[0]), \
             f'{dataset} should have {dset_to_num_peds[dataset]} peds but has {len(outputs[0])}'
 
-        seq_name_to_sorted_items = {}
-        assert len(seq_names) == 1, "only one scene supported"
-        for seq in seq_names[0]:
-            idxs = np.where(seq_names == seq)[0]
-            print("idxs:", idxs)
-            import ipdb; ipdb.set_trace()
-            out = outputs[idxs]
-            lbl = labels[idxs]
-            obs = obses[idxs]
-            fram = frame_ids[idxs]
-            ped = ped_ids[idxs]
-            print('out:', lbl)
-            print("obs:", obs)
-            print('lbl:', lbl)
-            print("fram:", fram)
-            print("ped:", ped)
-            import ipdb; ipdb.set_trace()
-            seq_name_to_sorted_items[seq] = sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: x[-1])
-
-        # frame_ids = []
-        # ped_ids = []
-        # seq_names = []
-        # dset_dir = f'data/peds_per_scene/{dataset}'
-        # sdd_scenes = os.listdir(dset_dir)
-        # for seq in sdd_scenes:
-        #     with open(os.path.join(dset_dir, seq), 'r') as f:
-        #         for line in f.read().splitlines():
-        #             data = line.split(' ')
-        #             seq_names.append(data[0])
-        #             num_frames = int(data[1])
-        #             num_peds = int(data[2])
-        #             frame_ids.append(data[3:3+num_frames])
-        #             ped_ids.append(data[3+num_frames:3+num_frames+num_peds])
-        #             assert len(data) == 3+num_frames+num_peds, f'len(data) ({len(data)}) != {3+num_frames+num_peds}'
-        # peds_per_seq = np.cumsum([len(ped_ids) for ped_ids in ped_ids]).tolist()
-
-        # save trajectories to standard format
+        vv_to_standard_seq_name = {
+            'biwi_eth': 'eth',
+            'biwi_hotel': 'hotel',
+            'crowds_zara01': 'zara1',
+            'crowds_zara02': 'zara2',
+            'students001': 'univ',
+            'students003': 'univ3',
+            **dict(zip(SEQUENCE_NAMES['sdd'], [seq.replace('_', '') for seq in SEQUENCE_NAMES['sdd']]))
+        }
         assert len(seq_names) == len(ped_ids) == len(frame_ids) == len(outputs) == len(labels) == len(obses) == 1, \
             f'len(seq_names) ({len(seq_names)}) != len(ped_ids) ({len(ped_ids)}) != len(frame_ids) ({len(frame_ids)})' \
             f' != len(outputs) ({len(outputs)}) != len(labels) ({len(labels)}) != len(obses) ({len(obses)}) != 1'
-        assert len(outputs) == 1, "only one scene supported"
-        assert len(labels) == 1, "only one scene supported"
-        obs = obses[0]
-        offset = obs[:, -1:, :]
-        dset_outputs = outputs[0] + offset[:, tf.newaxis, :, :]
-        dset_labels = labels[0] + offset
+        assert len(outputs) == len(labels) == len(obses) == len(frame_ids) == len(ped_ids) == len(seq_names) == 1, \
+            "all should be of length 1"
+        seq_names = seq_names[0]
+        ped_ids = ped_ids[0]
+        frame_ids = frame_ids[0]
+        outputs = outputs[0]
+        labels = labels[0]
+        obses = obses[0]
+
+        seq_name_to_frames = {}
+        for seq in SEQUENCE_NAMES[dataset]:
+            idxs = np.where(seq_names == vv_to_standard_seq_name[seq])[0]
+            out = tf.gather(outputs, idxs)
+            lbl = tf.gather(labels, idxs)
+            obs = tf.gather(obses, idxs)
+            fram = tf.gather(frame_ids, idxs)
+            ped = tf.gather(ped_ids, idxs)
+            # gather same frames together
+            unique_final_obs_frames_sorted = sorted(np.unique(fram[:, 7].numpy()))
+            frames_this_seq = []
+            for frame in unique_final_obs_frames_sorted:
+                idxs = np.where(fram[:, 7] == frame)[0]  # 7 is the last obs step
+                assert len(idxs) > 0
+                outp = tf.gather(out, idxs)
+                labl = tf.gather(lbl, idxs)
+                obse = tf.gather(obs, idxs)
+                fra = tf.gather(fram, idxs)
+                pede = tf.gather(ped, idxs)
+                frames_this_seq.append([outp, labl, obse, fra, pede])
+            seq_name_to_frames[seq] = frames_this_seq
+            # save_seqs.append(sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: (x[-1], x[-2][-1])))
+            # seq_name_to_sorted_items[seq] = sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: (x[-1], x[-2][-1]))  # get the last frame
+
+        # save trajectories to standard format
+        save_path = '../trajectory_reward/results/trajectories/vv'
+        print("check save path:", save_path)
+        # print("dir(self.args):")
+        # print(dir(self.args))
         # import ipdb; ipdb.set_trace()
         if dataset == 'sdd':
-            obs = obs * 100
-            dset_outputs = dset_outputs * 100
-            dset_labels = dset_labels * 100
-
-        save_path = '../trajectory_reward/results/trajectories/vv'
-        if dataset == 'sdd':
             save_path += '/trajnet_sdd'
-        for s, e, ped_ids, frame_ids, seq_name in tqdm(zip([0]+peds_per_seq[:-1], peds_per_seq, ped_ids, frame_ids,
-                                                           seq_names), desc='Saving trajectories...', total=len(peds_per_seq)):
-            # check that the seqs metadata and agents match
-            pred = np.flip(dset_outputs[s:e].numpy().transpose(1,0,2,3), -1)  # --> (20, 12, num_peds, 2) + flip x and y
-            flattened_gt = self.flatten_scene(np.flip(dset_labels[s:e].numpy(), -1),  # --> (num_peds, 12, 2)
-                                              frame_ids[self.args.obs_frames:], ped_ids)
-            flattened_obs = self.flatten_scene(np.flip(obs[s:e].numpy(), -1),  # --> (num_peds, 8, 2)
-                                               frame_ids[:self.args.obs_frames], ped_ids)
-            # todo save correct ped_ids and frame_ids
-            # import ipdb; ipdb.set_trace()
-            for sample_i, sample in enumerate(pred):
-                flattened_peds = self.flatten_scene(sample, frame_ids[self.args.obs_frames:], ped_ids)
-                self.save_trajectories(flattened_peds, save_path, seq_name, frame_ids[self.args.obs_frames-1],
-                                       suffix=f'/sample_{sample_i:03d}')
-            self.save_trajectories(flattened_gt, save_path, seq_name, frame_ids[self.args.obs_frames-1], suffix='/gt')
-            self.save_trajectories(flattened_obs, save_path, seq_name, frame_ids[self.args.obs_frames - 1], suffix='/obs')
-        print(f"saved {len(frame_ids)} trajectories to {save_path}")
+
+        for seq_name, frames in seq_name_to_frames.items():
+            for out, lbl, obs, frame_ids, ped_ids in tqdm(frames, desc=f'Saving trajs in {seq_name}...', total=len(frames)):
+                assert np.all([np.all(frame_ids[0].numpy() == f for f in frame_ids)]), \
+                    f'all 20 frame_ids should be the same for all peds but are {frame_ids}'
+                frame_ids = frame_ids[0].numpy()
+                offset = obs[:, -1:, :]
+                dset_outputs = out + offset[:, tf.newaxis, :, :]
+                dset_labels = lbl + offset
+                # import ipdb; ipdb.set_trace()
+                if dataset == 'sdd':
+                    obs = obs * 100
+                    dset_outputs = dset_outputs * 100
+                    dset_labels = dset_labels * 100
+
+                # check that the seqs metadata and agents match
+                pred = np.flip(dset_outputs.numpy().transpose(1,0,2,3), -1)  # --> (20, num_peds, 12, 2) + flip x and y
+                flattened_gt = self.flatten_scene(np.flip(dset_labels.numpy(), -1),  # --> (num_peds, 12, 2)
+                                                  frame_ids[self.args.obs_frames:], ped_ids)
+                flattened_obs = self.flatten_scene(np.flip(obs.numpy(), -1),  # --> (num_peds, 8, 2)
+                                                   frame_ids[:self.args.obs_frames], ped_ids)
+
+                # todo save correct ped_ids and frame_ids
+                for sample_i, sample in enumerate(pred):
+                    flattened_peds = self.flatten_scene(sample, frame_ids[self.args.obs_frames:], ped_ids)
+                    self.save_trajectories(flattened_peds, save_path, seq_name, frame_ids[self.args.obs_frames-1],
+                                           suffix=f'/sample_{sample_i:03d}')
+                self.save_trajectories(flattened_gt, save_path, seq_name, frame_ids[self.args.obs_frames-1], suffix='/gt')
+                self.save_trajectories(flattened_obs, save_path, seq_name, frame_ids[self.args.obs_frames - 1], suffix='/obs')
+        print(f"saved trajectories to {save_path}")
 
     @staticmethod
     def flatten_scene(trajs_arr, frame_nums=None, ped_nums=None, frame_skip=10):

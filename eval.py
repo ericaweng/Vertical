@@ -14,20 +14,20 @@ def get_cmds(args):
         cmd = f'python main.py --model vb --points 3 --test_set {dataset}'  # --use_maps 0'
         cmds.append(cmd)
         # cmd = f'python main.py  --model V  --loada ./weights/vertical/a_{dataset} --loadb ./weights/vertical/b_{dataset}'
-    # cmds = [
-    #         "python main.py   --model V --loada ./logs/20230225-190502modelvaeth   --loadb  ./logs/20230225-193323modelvbeth",
-    #         "python main.py   --model V --loada ./logs/20230225-190739modelvahotel   --loadb ./logs/20230225-193331modelvbhotel",
-    #         "python main.py   --model V --loada ./logs/20230225-193037modelvauniv  --loadb ./logs/20230225-192959modelvbuniv",
-    #         "python main.py   --model V --loada ./logs/20230225-194144modelvazara1   --loadb   ./logs/20230225-194159modelvbzara1",
-    #         "python main.py   --model V --loada ./logs/20230225-194045modelvazara2   --loadb ./logs/20230225-204854modelvbzara2",
-    #         "python main.py   --model V --loada ./logs/20230227-123855modelvasdd  --loadb  ./logs/20230227-123842modelvbsdd" ]
-        cmds = """ipy main.py   --model V --loada ./logs/20230227-220653modelvaeth --loadb ./logs/20230227-230244modelvbeth
-    ipy main.py   --model V --loada ./logs/20230227-230701modelvahotel --loadb ./logs/20230227-230701modelvbhotel
-    ipy main.py   --model V --loada ./logs/20230227-230701modelvauniv --loadb ./logs/20230227-230701modelvbuniv
-    ipy main.py   --model V --loada ./logs/20230227-230701modelvazara1 --loadb ./logs/20230227-230701modelvbzara1
-    ipy main.py   --model V --loada ./logs/20230227-230701modelvazara2 --loadb ./logs/20230227-232350modelvbzara2
-    ipy main.py   --model V --loada ./logs/20230227-233707modelvasdd --loadb ./logs/20230227-233707modelvbsdd""".replace(
-            'ipy', 'python').splitlines()
+    cmds = [
+            "python main.py   --model V --loada ./logs/20230225-190502modelvaeth   --loadb  ./logs/20230225-193323modelvbeth",
+            "python main.py   --model V --loada ./logs/20230225-190739modelvahotel   --loadb ./logs/20230225-193331modelvbhotel",
+            "python main.py   --model V --loada ./logs/20230225-193037modelvauniv  --loadb ./logs/20230225-192959modelvbuniv",
+            "python main.py   --model V --loada ./logs/20230225-194144modelvazara1   --loadb   ./logs/20230225-194159modelvbzara1",
+            "python main.py   --model V --loada ./logs/20230225-194045modelvazara2   --loadb ./logs/20230225-204854modelvbzara2",
+            "python main.py   --model V --loada ./logs/20230227-123855modelvasdd  --loadb  ./logs/20230227-123842modelvbsdd" ]
+    #     cmds = """ipy main.py   --model V --loada ./logs/20230227-220653modelvaeth --loadb ./logs/20230227-230244modelvbeth
+    # ipy main.py   --model V --loada ./logs/20230227-230701modelvahotel --loadb ./logs/20230227-230701modelvbhotel
+    # ipy main.py   --model V --loada ./logs/20230227-230701modelvauniv --loadb ./logs/20230227-230701modelvbuniv
+    # ipy main.py   --model V --loada ./logs/20230227-230701modelvazara1 --loadb ./logs/20230227-230701modelvbzara1
+    # ipy main.py   --model V --loada ./logs/20230227-230701modelvazara2 --loadb ./logs/20230227-232350modelvbzara2
+    # ipy main.py   --model V --loada ./logs/20230227-233707modelvasdd --loadb ./logs/20230227-233707modelvbsdd""".replace(
+    #         'ipy', 'python').splitlines()
     return cmds
 
 def spawn(cmds, args):

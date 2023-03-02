@@ -133,15 +133,15 @@ class BaseHandlerStructure(C.training.Structure):
             self.set_metrics(*metrics)
             self.set_metrics_weights(0.0, 0.0, 1.0, 0.0)
         else:
-            import ipdb; ipdb.set_trace()
             key_points = self.args.key_points
             pi = [int(i) for i in key_points.split('_')]
             self.keypoints_index = tf.cast(pi, tf.int32)
-            # if self.args.loss_type == 'sade' or self.args.loss_type == 'sfde':
-            self.set_metrics('ade', 'fde', 'sade', 'sfde', self.l2_keypoints)
-            # else:
-            #     self.set_metrics('ade', 'fde', self.l2_keypoints)
-            self.set_metrics_weights(1.0, 0.0, 0.0, 0.0, 0.0)
+            if self.args.loss_type == 'sade' or self.args.loss_type == 'sfde':
+                self.set_metrics('ade', 'fde', 'sade', 'sfde', self.l2_keypoints)
+                self.set_metrics_weights(1.0, 0.0, 0.0, 0.0, 0.0)
+            else:
+                self.set_metrics('ade', 'fde', self.l2_keypoints)
+                self.set_metrics_weights(1.0, 0.0, 0.0)
 
     def set_model_type(self, new_type: type[BaseHandlerModel]):
         self.model_type = new_type

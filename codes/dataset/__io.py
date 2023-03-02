@@ -65,7 +65,7 @@ def _get_ped_ids(input_agents: list[Agent]) -> tf.Tensor:
     """
     inputs = []
     for agent in tqdm(input_agents, 'Getting agent ids...'):
-        inputs.append(0)
+        inputs.append(agent.ped_id)
     return tf.cast(inputs, tf.int32)
 
 def _get_frames(input_agents: list[Agent]) -> tf.Tensor:
