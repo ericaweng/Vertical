@@ -413,8 +413,8 @@ class Structure(BaseObject):
 
             epoch = (batch_id * self.args.batch_size) // train_number
             loss, loss_dict, loss_move = self.gradient_operations(
-                inputs=dat[:-1],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
-                # inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
+                # inputs=dat[:-1]
+                inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
                 labels=dat[-1],
                 loss_move_average=loss_move,
                 epoch=epoch,
@@ -492,6 +492,14 @@ class Structure(BaseObject):
             return_results=True,
             show_timebar=True,
         )
+        # import time
+        # t_s = time.time()
+        # metrics, metrics_dict = self.__test_on_dataset(
+        #     ds=ds_test,
+        # )
+        # dt = time.time() - t_s
+        # print(f"dt: {dt:0.3f} seconds")
+        # import ipdb; ipdb.set_trace()
 
         # Write test results
         self.print_test_results(metrics_dict, dataset)
@@ -588,9 +596,6 @@ class Structure(BaseObject):
         # save trajectories to standard format
         save_path = f'../trajectory_reward/results/trajectories/{self.args.save_traj_dir}'
         print("check save path:", save_path)
-        # print("dir(self.args):")
-        # print(dir(self.args))
-        # import ipdb; ipdb.set_trace()
         if dataset == 'sdd':
             save_path += '/trajnet_sdd'
 
@@ -599,10 +604,8 @@ class Structure(BaseObject):
                 assert np.all([np.all(frame_ids[0].numpy() == f for f in frame_ids)]), \
                     f'all 20 frame_ids should be the same for all peds but are {frame_ids}'
                 frame_ids = frame_ids[0].numpy()
-                # offset = obs[:, -1:, :]
-                dset_outputs = out# + offset[:, tf.newaxis, :, :]
-                dset_labels = lbl# + offset
-                # import ipdb; ipdb.set_trace()
+                dset_outputs = out
+                dset_labels = lbl
                 if dataset == 'sdd':
                     obs = obs * 100
                     dset_outputs = dset_outputs * 100
@@ -678,13 +681,19 @@ class Structure(BaseObject):
             return_enumerate=False) if show_timebar else ds_batch
 
         test_numbers = []
+        import time
+        ds = time.time()
+        i = 0
         for dat in timebar:
             outputs, metrics, metrics_dict = self.model_validate(
-                inputs=dat[:-1],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
-                # inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
+                # inputs=dat[:-1],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
+                inputs=dat[:-4],  # -4 bc don't want seq_name, frame_id, ped_id, and labels
                 labels=dat[-1],
                 training=False,
             )
+            i += 1
+            if i % 20 == 0:
+                print(f"Tested {i} batches in {time.time() - ds} seconds")
             test_numbers.append(outputs[0].shape[0])
 
             if return_results:

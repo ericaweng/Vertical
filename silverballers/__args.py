@@ -7,9 +7,12 @@
 @Github: https://github.com/cocoon2wong
 @Copyright 2022 Conghao Wong, All Rights Reserved.
 """
-
+import time
+import os
 import codes as C
+from codes.utils import dir_check
 
+TIME = time.strftime('%Y%m%d-%H%M%S', time.localtime(time.time()))
 
 class AgentArgs(C.args.BaseArgTable):
 
@@ -131,7 +134,30 @@ class HandlerArgs(C.args.BaseArgTable):
         """
         return self._get('loss_type', 'ade', argtype='static')
 
+    @property
+    def loss_weights_b(self) -> list[float]:
+        """
+        Loss type used to train the model.
+        """
+        value = list(map(float, self._get('loss_weights_b', '0.8,0.2', argtype='static').split(',')))
+        return value
 
+    @property
+    def log_dir(self) -> str:
+        """
+        Folder to save training logs and models. If set to `null`,
+        logs will save at `args.save_base_dir/current_model`.
+        """
+
+        loss_weights_b = '_' + '_'.join(map(str, self.loss_weights_b))
+        log_dir_current = (TIME +
+                           self.model_name +
+                           self.model +
+                           self.test_set +
+                           loss_weights_b)
+        default_log_dir = os.path.join(dir_check(self.save_base_dir),
+                                       log_dir_current)
+        return self._get('log_dir', dir_check(default_log_dir), argtype='static')
 
 class SilverballersArgs(C.args.BaseArgTable):
 

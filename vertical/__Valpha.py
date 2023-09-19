@@ -153,18 +153,28 @@ class VA(BaseAgentStructure):
         # }
         if self.args.keypoints_loss_type == 'sade':
             self.set_loss(self.scene_l2_loss)  # loss on keypoints
+            self.set_loss_weights(1.0)
         elif self.args.keypoints_loss_type == 'ade':
             self.set_loss(self.l2_loss)
+            self.set_loss_weights(1.0)
+        elif self.args.keypoints_loss_type == 'mix':
+            self.set_loss(self.scene_l2_loss, self.l2_loss)  # loss on keypoints
+            self.set_loss_weights(*self.args.loss_weights_a)
+            # self.set_loss_weights(0.5, 0.5)
         else:
             raise ValueError(f"VA loss type {self.args.keypoints_loss_type} is not supported")
-        self.set_loss_weights(1.0)
-        print(f"VA keypoints loss type: {self.args.keypoints_loss_type}")
+
+        print("V_alpha")
+        print("self.loss_weights", self.loss_weights)
+        print(f"val_save_metric: {val_save_metric}")
 
         self.set_metrics(self.min_FDE, self.min_sFDE)
         if val_save_metric == 'fde':
             self.set_metrics_weights(1.0, 0.0)
         elif val_save_metric == 'sfde':
             self.set_metrics_weights(0.0, 1.0)
+        elif val_save_metric == 'mix':
+            self.set_metrics_weights(0.5, 0.5)
         else:
             raise ValueError(f"VA metrics type {val_save_metric} is not supported")
 

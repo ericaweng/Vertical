@@ -48,6 +48,7 @@ class BaseArgTable():
         try:
             arg_paths = [(p := os.path.join(dir_path, item)) for item in os.listdir(dir_path) if (
                 item.endswith('args.json'))]
+            print(f"arg_paths: {arg_paths}")
 
             with open(p, 'r') as f:
                 json_dict = json.load(f)

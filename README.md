@@ -1,13 +1,41 @@
-<!--
- * @Author: Conghao Wong
- * @Date: 2021-08-05 15:51:15
- * @LastEditors: Conghao Wong
- * @LastEditTime: 2022-08-26 20:13:20
- * @Description: file content
- * @Github: https://github.com/cocoon2wong
- * Copyright 2022 Conghao Wong, All Rights Reserved.
--->
+## Testing Vanilla View Vertically and Joint View Vertically
 
+To save predicted trajectories to file for evaluation using our evaluation system, please:
+1. create a new virtual environment
+2. run `pip install -r requirements.txt` to install requirements.
+3. the pretrained weights for the vanilla models are provided by the original authors in the repo already at `weights/vertical`
+download the pretrained joint VV models (by us) [here](https://drive.google.com/drive/folders/1pa2seYaWcLBlORYA8UeEctiHMdH1hzQo?usp=drive_link) and put them in `{joint_metrics_matter_root}/Vertical`
+
+4. To save predictions for vanilla View Verically on ETH dataset: from `{joint_metrics_matter_root}/Vertical`, run:
+`python main.py --model V --loada ./weights/vertical/a_<dataset> --loadb ./weights/vertical/b_<dataset> --save_traj_dir view_vertically`
+
+`<dataset>` is one of `eth`, `hotel`, `univ`, `zara1`,`zara2`, and `sdd`. (`sdd` refers to the trajnet sdd split.)
+the trajectory files will save to `{joint_metrics_matter_root}/trajectories/view_vertically` for all datasets.
+
+5. To save predictions for joint View Verically on ETH dataset: from `{joint_metrics_matter_root}/Vertical`, run:
+`python main.py --model V --loada ./joint_weights/a_<dataset> --loadb ./joint_weights/b_<dataset> --save_traj_dir joint_vv`
+ 
+`<dataset>` is one of `eth`, `hotel`, `univ`, `zara1`,`zara2`, and `sdd`.
+the trajectory files will save to `{joint_metrics_matter_root}/trajectories/joint_vv` for all datasets.
+
+You can specify a different save path by changing the `--save_traj_dir` argument.
+
+
+## Training Joint View Vertically
+Each View Vertically model needs two modules which are independently trained.
+From the root dir (`{joint_metrics_matter_root/Vertical`) run:
+
+`python main.py --model va --key_points 3_7_11 --test_set <dataset> --keypoints_loss_type mix --loss_weights_a 0.5,0.5 --metric sfde --gpu 0`
+
+and
+
+`python main.py --model vb --points 3 --test_set <dataset> --loss_type mix --loss_weights_b 0.5,0.3,0.2 --metric sfde --gpu 0`
+
+where for both commands, `<dataset>` is one of `eth`, `hotel`, `univ`, `zara1`,`zara2`, and `sdd`.
+
+models and logs will be saved to `logs/` directory.
+
+----------------
 # Codes for View Vertically: A Hierarchical Network for Trajectory Prediction via Fourier Spectrums
 
 ![$V^2$-Net](./vmethod.png)

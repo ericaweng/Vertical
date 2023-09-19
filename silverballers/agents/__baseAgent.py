@@ -34,8 +34,6 @@ class BaseAgentStructure(C.training.Structure):
             self.set_metrics(self.min_FDE)
         elif self.args.metric == 'ade':
             self.set_metrics(self.l2_loss)
-        else:
-            print('val save metric not set, make sure it is set')
 
         self.set_metrics_weights(1.0)
 

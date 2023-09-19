@@ -7,9 +7,12 @@
 @Github: https://github.com/cocoon2wong
 @Copyright 2022 Conghao Wong, All Rights Reserved.
 """
-
+import time
+import os
 from codes.args import BaseArgTable
+from codes.utils import dir_check
 
+TIME = time.strftime('%Y%m%d-%H%M%S', time.localtime(time.time()))
 
 class VArgs(BaseArgTable):
     def __init__(self, terminal_args: list[str] = None) -> None:
@@ -86,3 +89,36 @@ class VArgs(BaseArgTable):
         Type of loss function for key points (VA).
         """
         return self._get('keypoints_loss_type', 'ade', argtype='static')
+
+    @property
+    def loss_weights_b(self) -> list[float]:
+        """
+        Type of loss function for key points (VA).
+        """
+        value = self._get('loss_weights_b', [0.0], argtype='static')
+        return value
+
+    @property
+    def loss_weights_a(self) -> list[float]:
+        """
+        Type of loss function for key points (VA).
+        """
+        value = list(map(float, self._get('loss_weights_a', '1.0', argtype='static').split(',')))
+        return value
+
+    @property
+    def log_dir(self) -> str:
+        """
+        Folder to save training logs and models. If set to `null`,
+        logs will save at `args.save_base_dir/current_model`.
+        """
+        loss_weights = (('_a-' + '_'.join(map(str, self.loss_weights_a))) if self.loss_weights_a is not None else "") + (
+                ('_b-' + '_'.join(map(str, self.loss_weights_b))) if self.loss_weights_b is not None else '' )
+        log_dir_current = (TIME +
+                           self.model_name +
+                           self.model +
+                           self.test_set +
+                           loss_weights)
+        default_log_dir = os.path.join(dir_check(self.save_base_dir),
+                                       log_dir_current)
+        return self._get('log_dir', dir_check(default_log_dir), argtype='static')

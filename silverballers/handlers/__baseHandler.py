@@ -122,23 +122,33 @@ class BaseHandlerStructure(C.training.Structure):
         self.set_inputs('trajs', 'maps', 'paras', 'gt')
         self.set_labels('gt')
 
-        self.set_loss(self.args.loss_type, 'diff')
-        # self.set_loss('ade', 'diff')
-        self.set_loss_weights(0.8, 0.2)
+        if self.args.loss_type == 'ade':
+            self.set_loss('ade', 'diff')
+            self.set_loss_weights(0.8, 0.2)
+        elif self.args.loss_type == 'sade':
+            self.set_loss('sade', 'diff')
+        elif self.args.loss_type == 'mix':
+            self.set_loss('ade', 'sade', 'diff')
+            self.set_loss_weights(*self.args.loss_weights_b)
+            print("self.loss_list:", self.loss_list)
+            print("self.loss_weights:", self.loss_weights)
+            # self.set_loss_weights(0.4, 0.4, 0.2)
 
         if self.args.key_points == 'null':
-            # self.set_metrics('ade', 'fde')
-            # self.set_metrics_weights(1.0, 0.0)
-            metrics = ['ade', 'fde', 'sade', 'sfde']
-            self.set_metrics(*metrics)
-            self.set_metrics_weights(0.0, 0.0, 1.0, 0.0)
+            if self.args.loss_type == 'mix' or self.args.loss_type == 'sade':
+                metrics = ['ade', 'fde', 'sade', 'sfde']
+                self.set_metrics(*metrics)
+                self.set_metrics_weights(0.0, 0.0, 1.0, 0.0)
+            else:
+                self.set_metrics('ade', 'fde')
+                self.set_metrics_weights(1.0, 0.0)
         else:
             key_points = self.args.key_points
             pi = [int(i) for i in key_points.split('_')]
             self.keypoints_index = tf.cast(pi, tf.int32)
             if self.args.loss_type == 'sade' or self.args.loss_type == 'sfde':
                 self.set_metrics('ade', 'fde', 'sade', 'sfde', self.l2_keypoints)
-                self.set_metrics_weights(1.0, 0.0, 0.0, 0.0, 0.0)
+                self.set_metrics_weights(0.0, 0.0, 1.0, 0.0, 0.0)
             else:
                 self.set_metrics('ade', 'fde', self.l2_keypoints)
                 self.set_metrics_weights(1.0, 0.0, 0.0)
