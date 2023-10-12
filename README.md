@@ -10,13 +10,13 @@ download the pretrained joint VV models (by us) [here](https://drive.google.com/
 `python main.py --model V --loada ./weights/vertical/a_<dataset> --loadb ./weights/vertical/b_<dataset> --save_traj_dir view_vertically`
 
 `<dataset>` is one of `eth`, `hotel`, `univ`, `zara1`,`zara2`, and `sdd`. (`sdd` refers to the trajnet sdd split.)
-the trajectory files will save to `{joint_metrics_matter_root}/trajectories/view_vertically` for all datasets.
+the trajectory files will save to `{joint_metrics_matter_root}/results/trajectories/view_vertically` for all datasets.
 
 5. To save predictions for joint View Verically on ETH dataset: from `{joint_metrics_matter_root}/Vertical`, run:
 `python main.py --model V --loada ./joint_weights/a_<dataset> --loadb ./joint_weights/b_<dataset> --save_traj_dir joint_vv`
  
 `<dataset>` is one of `eth`, `hotel`, `univ`, `zara1`,`zara2`, and `sdd`.
-the trajectory files will save to `{joint_metrics_matter_root}/trajectories/joint_vv` for all datasets.
+the trajectory files will save to `{joint_metrics_matter_root}/results/trajectories/joint_vv` for all datasets.
 
 You can specify a different save path by changing the `--save_traj_dir` argument.
 

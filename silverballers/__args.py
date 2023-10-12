@@ -192,4 +192,4 @@ class SilverballersArgs(C.args.BaseArgTable):
     @property
     def save_traj_dir(self) -> int:
         """base dir to save generated trajectories"""
-        return self._get('save_traj_dir', 'vv_', argtype='dynamic')
+        return self._get('save_traj_dir', 'view_vertically', argtype='dynamic')

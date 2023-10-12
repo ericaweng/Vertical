@@ -594,7 +594,7 @@ class Structure(BaseObject):
             # seq_name_to_sorted_items[seq] = sorted(list(zip(out, lbl, obs, fram, ped)), key=lambda x: (x[-1], x[-2][-1]))  # get the last frame
 
         # save trajectories to standard format
-        save_path = f'../trajectory_reward/results/trajectories/{self.args.save_traj_dir}'
+        save_path = f'../../results/trajectories/{self.args.save_traj_dir}'
         print("check save path:", save_path)
         if dataset == 'sdd':
             save_path += '/trajnet_sdd'
